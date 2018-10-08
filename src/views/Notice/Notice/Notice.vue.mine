@@ -1,0 +1,200 @@
+<template>
+  <div class="Order app-container">
+    <div>
+      <el-form ref="queryForm" :inline="true" :model="queryData">
+        <el-form-item label="公告标题:" prop="userCode">
+          <el-input v-model="queryData.noticeName" placeholder="请输入公告标题"  oninput="if(value.length>65)value=value.slice(0,65)"  @change.native="handleChangeInput"/>
+        </el-form-item>
+        <el-form-item label="发布状态:" prop="changeUserName">
+          <el-select v-model="queryData.status" placeholder="请选择发布状态">
+            <!--	状态(1已发布0未发布2已下架)-->
+            <el-option label="全部" value=""/>
+            <el-option label="已发布" value="1"/>
+            <el-option label="未发布" value="0"/>
+            <el-option label="已下架" value="2"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="创建时间:" prop="changeUserName">
+          <el-date-picker
+            v-model="selTime"
+            clearable
+            value-format="yyyy-MM-dd HH:mm:ss"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"/>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="refresh">搜索</el-button>
+          <el-button type="primary" @click="addNotice">新增公告</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+    <div>
+      <el-table :data="list" border style="width: 100%" tooltip-effect='dark' v-loading="loading">
+        <el-table-column prop="noticeName" label="公告标题" show-overflow-tooltip align="center"/>
+        <el-table-column prop="createTime" label="发布时间" show-overflow-tooltip align="center" width="180"/>
+        <el-table-column label="发布状态" align="center" width="120">
+          <template slot-scope="scope">
+            {{ scope.row.status==0?'未发布':scope.row.status==1?'已发布':'已下架' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="creator" label="发布人" align="center" width="300"/>
+        <!--<el-table-column prop="content" label="公告内容" show-overflow-tooltip align="center"></el-table-column>-->
+        <el-table-column label="操作" align="center" width="200">
+          <template slot-scope="scope">
+            <el-button type="text" @click="status(scope.row)">
+              {{ scope.row.status==0?'发布':scope.row.status==1?'下架':'发布' }}
+            </el-button>
+            <!-- <el-button type="text" @clcik="viewArticle(scope.row.id)">查看</el-button>-->
+            <el-button v-if="scope.row.status == 0" type="text" @click="editNotice(scope.row.id)">编辑</el-button>
+            <el-button v-if="scope.row.status == 0 || scope.row.status == 2"  type="text" @click="delNotice(scope.row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-pagination
+        :total="count"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change = "handSizeChange"
+        @current-change="handPageChange"/>
+    </div>
+  </div>
+</template>
+
+<script>
+import { getNoticList, deleteNoticInfo, noticeInfo } from '@/api/notic'
+
+export default {
+  name: 'Order',
+  data() {
+    return {
+      queryData: {
+        pageCurrent: 0,
+        pageLimit: this.$store.getters.pageLimt,
+        noticeName: '',
+        status: '',
+        beginTime: '',
+        endTime: ''
+      },
+      selTime: [],
+      count: 0,
+      currItem: {},
+      loading: true,
+      list: [],
+      noticList: {
+        noticList: [
+          {required: true, message: '请输入标签名称', trigger: 'blur'},
+        ]
+      },
+    }
+  },
+  watch: {
+    selTime: {//获取两个时间进行查找
+      handler(newVal) {
+        console.log(newVal)
+        if (newVal) {
+          this.queryData.beginTime = this.selTime[0]
+          this.queryData.endTime = this.selTime[1]
+        } else {
+          this.queryData.beginTime = this.queryData.endTime = ''
+        }
+      },
+      deep: true
+    }
+   },
+  mounted() {
+    this.$nextTick(() => {
+      this.refresh()
+    })
+  },
+  methods: {
+    editNotice(id) {//编辑跳转
+      this.$router.push({
+        path: 'NoticEdit',
+        query: {
+          NoticEdit: id
+        }
+      })
+    },
+    handleChangeInput(event){
+     var noticName =	event.target.value;
+     console.log(noticName)
+    this.noticName.getData().then(() => {
+        setTimeout(() => {
+          this.loading = false
+        }, 300)
+      })
+//				this.refresh()
+	        console.log(123)
+	     },
+    delNotice(id) {
+      this.$confirm('确认删除当前公告').then(() => {//删除公告
+        deleteNoticInfo(id).then((res) => {
+          this.$message({
+            message: '删除成功!',
+            type: 'success'
+          })
+          this.refresh()
+        }).catch()
+      })
+    },
+    status(item) {
+      // <!--	状态(1已发布0未发布2已下架)-->
+      const status = item.status
+      const data = {
+        id: item.id
+      }
+      if (status == 1) {
+        data.status = 2
+      } else {
+        data.status = 1
+      }
+      noticeInfo(data).then((res) => {
+        this.$message({
+          message: '操作成功!',
+          type: 'success'
+        })
+        this.refresh()
+      })
+    },
+    addNotice() {
+      this.$router.push({
+        path: 'AddNotic'
+      })
+    },
+    handSizeChange(size) {
+      this.queryData.pageLimit = size
+      this.refresh()
+    },
+    handPageChange(page) {
+      this.queryData.pageCurrent = page
+      this.refresh()
+    },
+    refresh() {
+    	this.getData();
+      this.loading = true
+      this.getData().then(() => {
+        setTimeout(() => {
+          this.loading = false
+        }, 500)
+      })
+    },
+    getData() {
+      return new Promise((resolve) => {
+        getNoticList(this.queryData).then((res) => {
+        	if(res.code == 0){
+        		this.list = res.data.pageListData
+	          this.count = res.data.resultCount
+	          resolve(res)
+        	}
+        })
+      })
+    }
+  }
+}
+</script>
+
+<style rel="stylesheet/scss" lang="scss" scoped>
+
+</style>

@@ -1,0 +1,34 @@
+#container{
+  margin:0 auto;
+  position:relative;
+}
+#container img{
+  width:100%;
+}
+.tag{
+  display:inline-block;
+  margin:0;
+  padding:0;
+  position:absolute;
+  top:10px;
+  left:10px;
+  cursor:move;
+  user-select: none;
+}
+.tag p{
+  padding:0;
+  margin:0;
+  text-align:center;
+  background-color:darkcyan;
+  padding: 7px 15px;
+  border-radius: 5px;
+  color:#fff;
+}
+.tag span{
+  display:block;
+  text-align:center;
+  color:darkcyan;
+  line-height: 13px;
+  overflow: hidden;
+  background-color: rgba(0,0,0,0);
+}
